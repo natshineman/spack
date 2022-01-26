@@ -23,7 +23,7 @@ class Mvapich2Gdr(AutotoolsPackage):
 
     maintainers = ['ndcontini', 'natshineman', 'harisubramoni']
 
-    version('2.3.6', sha256='618408431348164c0824f3a72dc406763f169f7f5400f3cc15dfebf8d7166005')
+    version('2.3.6', sha256='6c46e374e42cb26caace469f646645a9c3408a6a851c996d8ccb6be3f829fc5a')
     version('2.3.5', sha256='bcfe8197875405af0ddbf6462e585efc21668108bec9b481fe53616ad36a98b4')
     version('2.3.4', sha256='ed78101e6bb807e979213006ee5f20ff466369b01f96b6d1cf0c471baf7e35aa')
     version('2.3.3', sha256='9b7b5dd235dbf85099fba3b6f1ccb49bb755923efed66ddc335921f44cb1b8a8')
@@ -93,9 +93,9 @@ class Mvapich2Gdr(AutotoolsPackage):
     depends_on('bison@3.4.2', type='build')
     depends_on('libpciaccess@0.13.5', when=(sys.platform != 'darwin'))
     depends_on('libxml2@2.9.10')
-    depends_on('cuda@9.2.88:11.2.2', when='+cuda')
+    depends_on('cuda@9.2.88:11.5.1', when='+cuda')
     depends_on('pmix@3.1.3', when='pmi_version=pmix')
-    depends_on('hip@3.9.0:4.1.0', when='+rocm')
+    depends_on('hip@3.9.0:4.5.2', when='+rocm')
 
     filter_compiler_wrappers(
         'mpicc', 'mpicxx', 'mpif77', 'mpif90', 'mpifort', relative_root='bin'
@@ -207,6 +207,8 @@ class Mvapich2Gdr(AutotoolsPackage):
         ]
 
     def configure_args(self):
+        spec = self.spec
+
         args = [
             '--with-ch3-rank-bits=32',
             '--without-hydra-ckpointlib',
@@ -214,5 +216,13 @@ class Mvapich2Gdr(AutotoolsPackage):
             '--enable-shared',
             '--disable-rdma-cm'
         ]
+
+        # prevents build error regarding gfortran not allowing mismatched arguments
+        if spec.satisfies('%gcc@10.0.0:'):
+            args.extend([
+                'FFLAGS=-fallow-argument-mismatch',
+                'FCFLAGS=-fallow-argument-mismatch'
+            ])
+
         args.extend(self.process_manager_options)
         return args

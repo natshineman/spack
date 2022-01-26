@@ -215,6 +215,8 @@ class Mvapich2x(AutotoolsPackage):
         ]
 
     def configure_args(self):
+        spec = self.spec
+
         args = [
             '--enable-ucr',
             '--disable-static',
@@ -226,4 +228,11 @@ class Mvapich2x(AutotoolsPackage):
         args.extend(self.distribution_options)
         args.append(self.construct_cflags)
         args.append(self.construct_ldflags)
+
+        # prevents build error regarding gfortran not allowing mismatched arguments
+        if spec.satisfies('%gcc@10.0.0:'):
+            args.extend([
+                'FFLAGS=-fallow-argument-mismatch',
+                'FCFLAGS=-fallow-argument-mismatch'
+            ])
         return args
