@@ -19,10 +19,11 @@ class Mvapich2Gdr(AutotoolsPackage):
     """
 
     homepage = 'http://mvapich.cse.ohio-state.edu'
-    url      = 'http://mvapich.cse.ohio-state.edu/download/mvapich/spack-mirror/mvapich2-gdr/mvapich2-gdr-2.3.6.tar.gz'
+    url      = 'http://mvapich.cse.ohio-state.edu/download/mvapich/spack-mirror/mvapich2-gdr/mvapich2-gdr-2.3.7.tar.gz'
 
     maintainers = ['ndcontini', 'natshineman', 'harisubramoni']
 
+    version('2.3.7', sha256='7bf748ed3750aa607382fc96229e256d888824aed758ce364b1ed9429da4779e')
     version('2.3.6', sha256='6c46e374e42cb26caace469f646645a9c3408a6a851c996d8ccb6be3f829fc5a')
     version('2.3.5', sha256='bcfe8197875405af0ddbf6462e585efc21668108bec9b481fe53616ad36a98b4')
     version('2.3.4', sha256='ed78101e6bb807e979213006ee5f20ff466369b01f96b6d1cf0c471baf7e35aa')
@@ -90,12 +91,12 @@ class Mvapich2Gdr(AutotoolsPackage):
     conflicts('+cuda +rocm', msg='MVAPICH2-GDR can only be built with either CUDA or ROCm')
     conflicts('~cuda ~rocm', msg='MVAPICH2-GDR must be built with either CUDA or ROCm')
 
-    depends_on('bison@3.4.2', type='build')
-    depends_on('libpciaccess@0.13.5', when=(sys.platform != 'darwin'))
+    depends_on('bison@3.4.2:', type='build')
+    depends_on('libpciaccess@0.13.5:', when=(sys.platform != 'darwin'))
     depends_on('libxml2@2.9.10')
-    depends_on('cuda@9.2.88:11.5.1', when='+cuda')
-    depends_on('pmix@3.1.3', when='pmi_version=pmix')
-    depends_on('hip@3.9.0:4.5.2', when='+rocm')
+    depends_on('cuda@9.2.88:', when='+cuda')
+    depends_on('pmix@3.1.3:', when='pmi_version=pmix')
+    depends_on('hip@3.9.0:', when='+rocm')
 
     filter_compiler_wrappers(
         'mpicc', 'mpicxx', 'mpif77', 'mpif90', 'mpifort', relative_root='bin'
@@ -214,8 +215,14 @@ class Mvapich2Gdr(AutotoolsPackage):
             '--without-hydra-ckpointlib',
             '--disable-static',
             '--enable-shared',
-            '--disable-rdma-cm'
+            '--disable-rdma-cm',
         ]
+	
+ 	if spec.satisfies('+cuda'):
+ 	    args.extend([
+ 	        '--with-hwloc=v2',
+  	        '--disable-opencl'
+ 	    ])
 
         # prevents build error regarding gfortran not allowing mismatched arguments
         if spec.satisfies('%gcc@10.0.0:'):
