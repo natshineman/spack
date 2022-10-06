@@ -36,7 +36,7 @@ class Mvapich2Gdr(AutotoolsPackage):
         'process_managers',
         description='The process manager to activate.',
         default='mpirun',
-        values=('slurm', 'mpirun', 'pbs', 'jsrun'),
+        values=('none','slurm','mpiexec', 'mpirun', 'pbs', 'jsrun'),
         multi=False
     )
 
@@ -44,7 +44,7 @@ class Mvapich2Gdr(AutotoolsPackage):
         'distribution',
         description='The type of fabric distribution.',
         default='stock-ofed',
-        values=('stock-ofed', 'mofed4.5', 'mofed4.6', 'mofed4.7', 'mofed5.0'),
+        values=('stock-ofed', 'mofed4.5', 'mofed4.6', 'mofed4.7','mofed4.9', 'mofed5.0'),
         multi=False
     )
 
@@ -54,7 +54,7 @@ class Mvapich2Gdr(AutotoolsPackage):
                     'Is ignored if set for mpirun or jsrun. '
                     'jsrun uses pmix regardless of chosen option.',
         default='pmi1',
-        values=('pmi1', 'pmi2', 'pmix'),
+        values=('simple','pmi1', 'pmi2', 'pmix'),
         multi=False
     )
 
@@ -91,7 +91,7 @@ class Mvapich2Gdr(AutotoolsPackage):
     conflicts('+cuda +rocm', msg='MVAPICH2-GDR can only be built with either CUDA or ROCm')
     conflicts('~cuda ~rocm', msg='MVAPICH2-GDR must be built with either CUDA or ROCm')
 
-    depends_on('bison@3.4.2:', type='build')
+    depends_on('bison@3.0.4', type='build')
     depends_on('libpciaccess@0.13.5:', when=(sys.platform != 'darwin'))
     depends_on('libxml2@2.9.10')
     depends_on('cuda@9.2.88:', when='+cuda')
@@ -138,9 +138,34 @@ class Mvapich2Gdr(AutotoolsPackage):
             opts.append('--enable-hip=basic')
             opts.append('--enable-rocm')
 
+        if 'process_managers=mpiexec' in spec:
+            opts.append('--with-pm=mpiexec')
+            if 'pmi_version=simple' in spec:
+                opts.append('--with-pmi=simple')
+            if 'pmi_version=pmi1' in spec:
+                opts.append('--with-pmi=pmi1')
+            if 'pmi_version=pmi2' in spec:
+                opts.append('--with-pmi=pmi2')
+            if 'pmi_version=pmix' in spec:
+                opts.append('--with-pmi=pmix')
+                opts.append('--with-pmix={0}'.format(spec['pmix'].prefix))
+        
         # See: http://slurm.schedmd.com/mpi_guide.html#mvapich2
         if 'process_managers=slurm' in spec:
             opts.append('--with-pm=slurm')
+            if 'pmi_version=simple' in spec:
+                opts.append('--with-pmi=simple')
+            if 'pmi_version=pmi1' in spec:
+                opts.append('--with-pmi=pmi1')
+            if 'pmi_version=pmi2' in spec:
+                opts.append('--with-pmi=pmi2')
+            if 'pmi_version=pmix' in spec:
+                opts.append('--with-pmi=pmix')
+                opts.append('--with-pmix={0}'.format(spec['pmix'].prefix))
+        if 'process_managers=none' in spec:
+            opts.append('--with-pm=none')
+            if 'pmi_version=simple' in spec:
+                opts.append('--with-pmi=simple')
             if 'pmi_version=pmi1' in spec:
                 opts.append('--with-pmi=pmi1')
             if 'pmi_version=pmi2' in spec:
@@ -150,13 +175,13 @@ class Mvapich2Gdr(AutotoolsPackage):
                 opts.append('--with-pmix={0}'.format(spec['pmix'].prefix))
 
         elif 'process_managers=pbs' in spec:
-            opts.append([
+            opts.extend([
                 '--with-pm=hydra',
                 '--with-pbs=/opt/pbs'
             ])
 
         elif 'process_managers=jsrun' in spec:
-            opts.append([
+            opts.extend([
                 '--with-pmi=pmix',
                 '--with-pmix={0}'.format(spec['pmix'].prefix),
                 '--with-pm=jsm'
@@ -217,12 +242,15 @@ class Mvapich2Gdr(AutotoolsPackage):
             '--enable-shared',
             '--disable-rdma-cm',
         ]
-	
- 	if spec.satisfies('+cuda'):
- 	    args.extend([
- 	        '--with-hwloc=v2',
-  	        '--disable-opencl'
- 	    ])
+    
+        if spec.satisfies('+cuda'):
+            args.extend([
+                 '--with-hwloc=v2',
+                 '--disable-opencl'
+            ])
+        args.extend([
+            '--with-ib-include=/usr/include',
+        ])
 
         # prevents build error regarding gfortran not allowing mismatched arguments
         if spec.satisfies('%gcc@10.0.0:'):
